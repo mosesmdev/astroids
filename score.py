@@ -4,6 +4,7 @@ class Score:
     def __init__(self):
         self.value = 0
         self.font = pygame.font.Font(None, 36)
+        self.high_score = 0  # Add high score tracking
         
     def add_points(self, asteroid_radius, min_radius):
         # Calculate size multiplier (how many times bigger than minimum)
@@ -14,6 +15,10 @@ class Score:
             self.value += 100
         else:  # Large
             self.value += 250
+    
+    def reset(self):
+        self.high_score = max(self.high_score, self.value)
+        self.value = 0
     
     def draw(self, screen):
         score_text = self.font.render(f"Score: {self.value}", True, (255, 255, 255))

@@ -2,12 +2,18 @@ import pygame
 from circleshape import CircleShape
 from shot import Shot
 from constants import *
+from explosion import Explosion
 
 class Player(CircleShape):
     def __init__(self, x, y):
         super().__init__(x, y, PLAYER_RADIUS)
         self.rotation = 0
         self.timer = 0
+        self.lives = PLAYER_LIVES  # Add initial lives
+        self.respawn_timer = 0  # Add respawn timer
+        self.is_alive = True
+        self.death_pause = 0  # Add death pause timer
+        self.explosion = None  # Track explosion state
         
 
     # in the player class
@@ -20,21 +26,49 @@ class Player(CircleShape):
         return [a, b, c]
     
     def draw(self, screen):
-        pygame.draw.polygon(screen, "white", self.triangle(), 2)
+        # Flash the player during respawn
+        if not self.is_alive:
+            if self.death_pause > 0:
+                return  # Don't draw player during death pause
+            if int(self.respawn_timer * 15) % 2:  # Faster flashing (15 instead of 10)
+                return
+        
+        # Draw the player triangle with a glow effect during respawn
+        if not self.is_alive and self.respawn_timer > 0:
+            # Draw glow
+            points = self.triangle()
+            glow_color = (100, 100, 255, 50)  # Blue glow
+            pygame.draw.polygon(screen, glow_color, points, 0)  # Filled
+        
+        # Draw normal triangle
+        glow_color = (100, 100, 255, 50)
+        pygame.draw.polygon(screen, glow_color, self.triangle(), 2)
 
     def update(self, dt):
-        keys = pygame.key.get_pressed()
-
-        if keys[pygame.K_a]:
-            self.rotate(-dt)
-        if keys[pygame.K_d]:
-            self.rotate(dt)
-        if keys[pygame.K_w]:
-            self.move(dt)
-        if keys[pygame.K_s]:
-            self.move(-dt)
-        if keys[pygame.K_SPACE]:
-            self.shoot(dt)
+        if self.death_pause > 0:
+            self.death_pause -= dt
+            if self.death_pause <= 0:
+                self.respawn()
+            return
+            
+        if self.respawn_timer > 0:
+            self.respawn_timer -= dt
+            if self.respawn_timer <= 0:
+                self.is_alive = True
+        
+        # Only process input if alive
+        if self.is_alive:
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_a]:
+                self.rotate(-dt)
+            if keys[pygame.K_d]:
+                self.rotate(dt)
+            if keys[pygame.K_w]:
+                self.move(dt)
+            if keys[pygame.K_s]:
+                self.move(-dt)
+            if keys[pygame.K_SPACE]:
+                self.shoot(dt)
         
         self.timer -= dt
 
@@ -83,3 +117,20 @@ class Player(CircleShape):
                 return True
         
         return False
+
+    def lose_life(self):
+        self.lives -= 1
+        self.is_alive = False
+        self.death_pause = 2.0  # 2 second pause before respawn
+        # Create enhanced player explosion
+        self.explosion = Explosion(self.position.x, self.position.y, self.radius * 4, True)
+        if self.lives <= 0:
+            return True
+        return False
+    
+    def respawn(self):
+        self.position.x = SCREEN_WIDTH / 2
+        self.position.y = SCREEN_HEIGHT / 2
+        self.rotation = 0
+        self.is_alive = False
+        self.respawn_timer = 2.0  # 2 seconds of invulnerability
