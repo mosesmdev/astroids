@@ -7,6 +7,8 @@ from asteroidfield import *
 from player import Player
 from asteroid import Asteroid
 from shot import Shot
+from starfield import Starfield
+from score import Score
 
 def main():
     pygame.init()
@@ -18,7 +20,7 @@ def main():
     Asteroid.containers = (asteroids, updatable, drawable)
     AsteroidField.containers = (updatable)
     Shot.containers = (shots, updatable, drawable)
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
     clock = pygame.time.Clock()
     dt = 0
     running = True
@@ -26,6 +28,8 @@ def main():
     playery = SCREEN_HEIGHT / 2
     player = Player(playerx, playery)
     asteroidfield = AsteroidField()
+    starfield = Starfield(150)  # Create 150 stars
+    score = Score()
 
     while running:
         for event in pygame.event.get():
@@ -33,6 +37,7 @@ def main():
                 running = False
         
         screen.fill((0, 0, 0))
+        starfield.draw(screen)   # Draw stars before other elements
         updatable.update(dt)
         for asteroid in asteroids:
             if asteroid.collision(player):
@@ -40,10 +45,12 @@ def main():
                 running = False
             for bullet in shots:
                 if bullet.collision(asteroid):
+                    score.add_points(asteroid.radius, ASTEROID_MIN_RADIUS)
                     asteroid.split()
                     bullet.kill()
         for item in drawable:
             item.draw(screen)
+        score.draw(screen)  # Draw score last so it's on top
         pygame.display.flip()
         dt = clock.tick(60) / 1000
 
